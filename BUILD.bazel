@@ -1,0 +1,78 @@
+load("@aspect_rules_js//js:defs.bzl", "js_library", "js_binary", "js_test", "js_run_devserver")
+load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@npm//:webpack-cli/package_json.bzl", "bin")
+load("@aspect_rules_webpack//webpack:defs.bzl", "webpack_bundle", "webpack_devserver")
+
+npm_link_all_packages(
+    name = "node_modules",
+)
+
+# bazelisk build //:auto_webpack_build
+# Works OK
+bin.webpack_cli(
+    name="auto_webpack_build",
+    srcs=[
+        ":node_modules",
+        "src/index.html",
+        "src/index.js",
+        "webpack.config.js",
+    ],
+    outs=[
+        "dist"
+    ],
+    args = [
+        "--config webpack.config.js"
+    ],
+    chdir = package_name(),
+    log_level = "debug"
+)
+
+# bazelisk run //:auto_webpack_dev
+bin.webpack_cli_binary(
+    name="auto_webpack_dev",
+    data=[
+        ":node_modules",
+        "src/index.html",
+        "src/index.js",
+        "webpack.config.js",
+    ],
+    args = [
+        "serve",
+        "--config webpack.config.js"
+    ],
+    chdir = package_name(),
+    log_level = "debug"
+)
+
+# bazelisk run //:dev
+# fails with Error: Cannot find module 'import-local'
+js_run_devserver(
+    name="dev",
+    tool="@webpack//:webpack",
+    # toolchain="@webpack//:webpack",
+    chdir=package_name(),
+    args= [
+        "serve",
+        "--config",
+        "webpack.config.js"
+    ],
+    data = [
+        ":node_modules",
+        "src/index.html",
+        "src/index.js",
+        "webpack.config.js",
+    ]
+)
+
+# bazel-example % bazelisk run //:devserver
+# Error: Cannot find module 'import-local'
+webpack_devserver(
+    name="devserver",
+    # chdir=package_name(),
+    data = [
+        ":node_modules",
+        "src/index.html",
+        "src/index.js"
+    ],
+    webpack_config = ":webpack.config.js"
+)
